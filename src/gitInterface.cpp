@@ -24,7 +24,7 @@ const std::string GitInterface::gitDirectoryArgument("--git-dir=");
 const std::string GitInterface::gitWorkTreeArgument("--work-tree=");
 const std::string GitInterface::gitGetVersionCmd("version");
 const std::string GitInterface::gitGetUntrackedFilesCmd("ls-files --other --error-unmatch --exclude-standard");
-const std::string GitInterface::gitGetUnstagedChangesCmd("diff --quiet HEAD");
+const std::string GitInterface::gitGetUnstagedChangesCmd("diff --shortstat");
 const std::string GitInterface::gitGetUncommittedChangesCmd("diff --cached --quiet HEAD");
 const std::string GitInterface::gitListBranchesCmd("");
 const std::string GitInterface::gitGetCurrentBranchCmd("rev-parse --abbrev-ref HEAD");
@@ -63,18 +63,20 @@ GitInterface::RepositoryInfo GitInterface::GetRepositoryInfo(
 	RepositoryInfo info;
 	info.name = ExtractLastDirectory(path);
 
-	int retVal = ExecuteCommand(BuildCommand(path, gitGetUnstagedChangesCmd));
+	int retVal = ExecuteCommand(BuildCommand(path, gitGetUncommittedChangesCmd));
 	if (retVal == 129)
 	{
 		info.isGitRepository = false;
 		return info;
 	}
-
-	info.unstagedChanges = retVal != 0;
-	info.uncommittedChanges = ExecuteCommand(BuildCommand(path,
-		gitGetUncommittedChangesCmd)) != 0;
+	info.uncommittedChanges = retVal != 0;
 
 	char buffer[4096];
+	buffer[0] = '\0';
+	if (!ExecuteCommand(BuildCommand(path, gitGetUnstagedChangesCmd), buffer, sizeof(buffer)))
+		std::cerr << "Failed to check for unstaged changes" << std::endl;
+	info.unstagedChanges = !std::string(buffer).empty();
+
 	buffer[0] = '\0';
 	if (!ExecuteCommand(BuildCommand(path, gitGetUntrackedFilesCmd), buffer, sizeof(buffer)))
 		std::cerr << "Failed to check for untracked files" << std::endl;
