@@ -8,20 +8,17 @@
 
 // Standard C++ headers
 #include <string>
-#include <vector>
+#include <map>
 
 class CredentialManager
 {
 public:
+	std::string GetCredentials(const std::string& requestString) const;
+	void AddCredentials(const std::string& requestString, const std::string& password);
 
 private:
-	struct Credentials
-	{
-		std::string userString;
-		std::string passString;
-	};
-
-	std::vector<Credentials> credentials;
+	typedef std::map<std::string, std::string> StringMap;
+	StringMap credentials;
 };
 
 #endif// CREDENTIAL_MANAGER_H_

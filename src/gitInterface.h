@@ -46,13 +46,11 @@ public:
 
 	static std::string GetGitVersion();
 	static RepositoryInfo GetRepositoryInfo(const std::string& path);
-	bool UpdateLocal(const std::string& repositoryPath,
-		const std::string& remote, std::string& branch);
-	bool UpdateRemote(const std::string& repositoryPath,
+	bool FetchAll(const std::string& path);
+	bool UpdateRemote(const std::string& path,
 		const std::string& remote, std::string& branch);
 
 private:
-	static const std::string stderrToNullFile;
 	static const std::string gitName;
 	static const std::string gitDirectoryArgument;
 	static const std::string gitWorkTreeArgument;
@@ -61,8 +59,11 @@ private:
 	static const std::string gitGetUnstagedChangesCmd;
 	static const std::string gitGetUncommittedChangesCmd;
 	static const std::string gitListBranchesCmd;
+	static const std::string gitListRemoteBranchesCmd;
 	static const std::string gitGetCurrentBranchCmd;
 	static const std::string gitListRemotesCmd;
+	static const std::string gitFetchAllCmd;
+	static const std::string gitFailMessage;
 
 	static std::string GetLocalHead(const std::string& path,
 		const std::string& branch);
@@ -71,11 +72,21 @@ private:
 
 	static std::string BuildCommand(const std::string& path,
 		const std::string& command);
-	static bool ExecuteCommand(const std::string& command, char* buffer,
-		const unsigned int& bufferSize, const bool& suppressStderr = true);
-	static int ExecuteCommand(const std::string& command, const bool& suppressStderr = true);
 
 	static std::string ExtractLastDirectory(const std::string& path);
+	static std::vector<std::string> SplitBufferByLine(const std::string& buffer);
+
+	static std::vector<RemoteInfo> BuildRemotes(const std::string& path,
+		const std::vector<std::string>& remotes);
+	static RemoteInfo BuildRemote(const std::string& path,
+		const std::string& remote);
+	static std::vector<BranchInfo> BuildBranches(const std::string& path,
+		const std::vector<std::string>& branches);
+	static BranchInfo BuildBranch(const std::string& path,
+		const std::string& branch);
+	static BranchInfo BuildBranch(const std::string& path,
+		const std::string& remote, const std::string& branch);
+	static std::string CleanBranchName(const std::string &name);
 
 	CredentialManager credentials;
 };

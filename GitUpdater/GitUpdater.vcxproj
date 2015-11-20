@@ -74,6 +74,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_MBCS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -96,6 +97,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_MBCS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -122,11 +124,14 @@
     <ClCompile Include="..\src\fileSystemNavigator.cpp" />
     <ClCompile Include="..\src\gitInterface.cpp" />
     <ClCompile Include="..\src\main.cpp" />
+    <ClCompile Include="..\src\shellInterface.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\credentialManager.h" />
     <ClInclude Include="..\src\fileSystemNavigator.h" />
     <ClInclude Include="..\src\gitInterface.h" />
+    <ClInclude Include="..\src\shellInterface.h" />
+    <ClInclude Include="..\src\stringUtilities.h" />
     <ClInclude Include="..\src\windirent.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

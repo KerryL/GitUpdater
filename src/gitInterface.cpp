@@ -4,20 +4,14 @@
 // Desc:  Interface to git for updating and checking repository status.
 
 // Standard C/C++ headers
-#include <stdio.h>
 #include <sstream>
 #include <iostream>
+#include <cassert>
 
 // Local headers
 #include "gitInterface.h"
-
-#ifdef _WIN32
-#define popen _popen
-#define pclose _pclose
-const std::string GitInterface::stderrToNullFile(" 2> nul");
-#else
-const std::string GitInterface::stderrToNullFile(" 2> /dev/null");
-#endif
+#include "shellInterface.h"
+#include "stringUtilities.h"
 
 const std::string GitInterface::gitName("git");
 const std::string GitInterface::gitDirectoryArgument("--git-dir=");
@@ -26,18 +20,20 @@ const std::string GitInterface::gitGetVersionCmd("version");
 const std::string GitInterface::gitGetUntrackedFilesCmd("ls-files --other --error-unmatch --exclude-standard");
 const std::string GitInterface::gitGetUnstagedChangesCmd("diff --shortstat");
 const std::string GitInterface::gitGetUncommittedChangesCmd("diff --cached --quiet HEAD");
-const std::string GitInterface::gitListBranchesCmd("");
+const std::string GitInterface::gitListBranchesCmd("branch");
+const std::string GitInterface::gitListRemoteBranchesCmd("branch -r");
 const std::string GitInterface::gitGetCurrentBranchCmd("rev-parse --abbrev-ref HEAD");
-const std::string GitInterface::gitListRemotesCmd("");
+const std::string GitInterface::gitListRemotesCmd("remote");
+const std::string GitInterface::gitFetchAllCmd("fetch --all --prune --tags");
+const std::string GitInterface::gitFailMessage("fatal:");
 
 std::string GitInterface::GetGitVersion()
 {
-	char buffer[1024];
-	buffer[0] = '\0';
-	if (!ExecuteCommand(gitName + " " + gitGetVersionCmd, buffer, sizeof(buffer)))
+	ShellInterface shell;
+	std::string version;
+	if (!shell.ExecuteCommand(gitName + " " + gitGetVersionCmd, version))
 		return "";
-
-	return buffer;
+	return version;
 }
 
 std::string GitInterface::ExtractLastDirectory(const std::string& path)
@@ -63,41 +59,178 @@ GitInterface::RepositoryInfo GitInterface::GetRepositoryInfo(
 	RepositoryInfo info;
 	info.name = ExtractLastDirectory(path);
 
-	int retVal = ExecuteCommand(BuildCommand(path, gitGetUncommittedChangesCmd));
-	if (retVal == 129)
+	ShellInterface shell;
+	shell.ExecuteCommand(BuildCommand(path, gitGetUncommittedChangesCmd));
+	if (shell.GetExitCode() == 129)
 	{
 		info.isGitRepository = false;
 		return info;
 	}
-	info.uncommittedChanges = retVal != 0;
+	info.uncommittedChanges = shell.GetExitCode() != 0;
 
-	char buffer[4096];
-	buffer[0] = '\0';
-	if (!ExecuteCommand(BuildCommand(path, gitGetUnstagedChangesCmd), buffer, sizeof(buffer)))
+	std::string stdOut;
+	if (!shell.ExecuteCommand(BuildCommand(path, gitGetUnstagedChangesCmd), stdOut))
 		std::cerr << "Failed to check for unstaged changes" << std::endl;
-	info.unstagedChanges = !std::string(buffer).empty();
+	info.unstagedChanges = !stdOut.empty();
 
-	buffer[0] = '\0';
-	if (!ExecuteCommand(BuildCommand(path, gitGetUntrackedFilesCmd), buffer, sizeof(buffer)))
+	if (!shell.ExecuteCommand(BuildCommand(path, gitGetUntrackedFilesCmd), stdOut))
 		std::cerr << "Failed to check for untracked files" << std::endl;
-	info.untrackedFiles = !std::string(buffer).empty();
+	info.untrackedFiles = !stdOut.empty();
+
+	if (!shell.ExecuteCommand(BuildCommand(path, gitListRemotesCmd), stdOut))
+		std::cerr << "Failed to list remotes" << std::endl;
+	info.remotes = BuildRemotes(path, SplitBufferByLine(stdOut));
+
+	if (!shell.ExecuteCommand(BuildCommand(path, gitListBranchesCmd), stdOut))
+		std::cerr << "Failed to list branches" << std::endl;
+	info.branches = BuildBranches(path, SplitBufferByLine(stdOut));
 
 	// TODO:  Implement
-	//info.branches;
-	//info.remotes;
 	//info.subModules;
 
 	return info;
 }
 
-bool GitInterface::UpdateLocal(const std::string& repositoryPath,
-	const std::string& remote, std::string& branch)
+std::vector<GitInterface::RemoteInfo> GitInterface::BuildRemotes(
+	const std::string& path, const std::vector<std::string>& remotes)
 {
-	// TODO:  Implement
-	return false;
+	std::vector<RemoteInfo> info(remotes.size());
+	unsigned int i;
+	for (i = 0; i < remotes.size(); i++)
+		info[i] = BuildRemote(path, remotes[i]);
+	return info;
 }
 
-bool GitInterface::UpdateRemote(const std::string& repositoryPath,
+GitInterface::RemoteInfo GitInterface::BuildRemote(const std::string& path,
+	const std::string& remote)
+{
+	RemoteInfo info;
+	info.name = remote;
+
+	ShellInterface shell;
+
+	std::string stdOut;
+	if (!shell.ExecuteCommand(BuildCommand(path, gitListRemoteBranchesCmd), stdOut))
+		std::cerr << "Failed to list remote branches" << std::endl;
+	std::vector<std::string> branches = SplitBufferByLine(stdOut);
+	unsigned int i;
+	size_t slashLocation;
+	for (i = 0; i < branches.size(); i++)
+	{
+		slashLocation = branches[i].find('/');
+		assert(slashLocation != std::string::npos);
+
+		if (slashLocation < remote.length())
+			continue;
+		else if (branches[i].substr(slashLocation - remote.length(), remote.length()).compare(remote) == 0)
+		{
+			// Hack to fix problems that can occur when a repo has an entry like "origin/HEAD -> origin/master"
+			slashLocation = branches[i].find_last_of('/');
+			assert(slashLocation != std::string::npos);
+			info.branches.push_back(BuildBranch(path, remote, branches[i].substr(slashLocation + 1)));
+		}
+	}
+
+	
+	//info.branches// TODO
+
+	return info;
+}
+
+std::string GitInterface::CleanBranchName(const std::string &name)
+{
+	std::string cleanName(Trim(name));
+	assert(name.length() > 0);
+	if (name[0] == '*')
+		cleanName = Trim(cleanName.substr(1));
+	return cleanName;
+}
+
+std::vector<GitInterface::BranchInfo> GitInterface::BuildBranches(
+	const std::string& path, const std::vector<std::string>& branches)
+{
+	std::vector<BranchInfo> info(branches.size());
+	unsigned int i;
+	for (i = 0; i < branches.size(); i++)
+		info[i] = BuildBranch(path, branches[i]);
+	return info;
+}
+
+GitInterface::BranchInfo GitInterface::BuildBranch(const std::string& path,
+	const std::string& branch)
+{
+	BranchInfo info;
+	info.name = branch;
+	info.hash = GetLocalHead(path, CleanBranchName(branch));
+	return info;
+}
+
+GitInterface::BranchInfo GitInterface::BuildBranch(const std::string& path,
+	const std::string& remote, const std::string& branch)
+{
+	BranchInfo info;
+	info.name = branch;
+	info.hash = GetRemoteHead(path, remote, branch);
+	return info;
+}
+
+std::vector<std::string> GitInterface::SplitBufferByLine(const std::string& buffer)
+{
+	std::vector<std::string> lines;
+	std::istringstream ss(buffer);
+	std::string token;
+	while (std::getline(ss, token))
+		lines.push_back(token);
+	return lines;
+}
+
+bool GitInterface::FetchAll(const std::string& path)
+{
+	ShellInterface shell;
+	std::string stdOut;
+	stdOut = shell.ExecuteInteractive(BuildCommand(path, gitFetchAllCmd),
+		ShellInterface::RedirectAllToNull);// RedirectErrToOut);
+
+	std::istringstream ss(stdOut);
+	if (ss.str().length() == 0)
+	{
+		std::cerr << "No remotes to fetch" << std::endl;
+		return false;
+	}
+
+	std::string response, remoteName;
+	const std::string fetching("Fetching");
+	const std::string password("Password for");
+	while (std::getline(ss, response))
+	{
+		if (response.length() > fetching.length() &&
+			response.substr(0, fetching.length()).compare(fetching) == 0)
+			remoteName = Trim(response.substr(fetching.length()));
+		else if (response.length() > gitFailMessage.length() &&
+			response.substr(0, gitFailMessage.length()).compare(gitFailMessage) == 0)
+		{
+			std::cerr << "Failed to fetch from " << remoteName << std::endl;
+			return false;
+		}
+		else if (response.length() > password.length() &&
+			response.substr(0, password.length()).compare(password) == 0)
+		{
+			std::string pw = credentials.GetCredentials(response);
+			if (pw.empty())
+			{
+				// TODO:  Get from user
+			}
+
+			stdOut = shell.ExecuteInteractive(pw + "\n");
+			ss.clear();
+			ss.str(stdOut);
+		}
+	}
+
+	return true;
+}
+
+bool GitInterface::UpdateRemote(const std::string& path,
 	const std::string& remote, std::string& branch)
 {
 	// TODO:  Implement
@@ -107,22 +240,22 @@ bool GitInterface::UpdateRemote(const std::string& repositoryPath,
 std::string GitInterface::GetLocalHead(const std::string& path,
 	const std::string& branch)
 {
-	char buffer[1024];
-	buffer[0] = '\0';
-	if (!ExecuteCommand(BuildCommand(path, "rev-parse " + branch)))
+	ShellInterface shell;
+	std::string stdOut;
+	if (!shell.ExecuteCommand(BuildCommand(path, "rev-parse " + branch), stdOut))
 		return "";
-	return buffer;
+	return stdOut;
 }
 
 std::string GitInterface::GetRemoteHead(const std::string& path,
 	const std::string &remote, const std::string& branch)
 {
-	char buffer[1024];
-	buffer[0] = '\0';
-	if (!ExecuteCommand(BuildCommand(path,
-		"rev-parse refs/remotes/" + remote + "/" + branch)))
+	ShellInterface shell;
+	std::string stdOut;
+	if (!shell.ExecuteCommand(BuildCommand(path,
+		"rev-parse refs/remotes/" + remote + "/" + branch), stdOut))
 		return "";
-	return buffer;
+	return stdOut;
 }
 
 std::string GitInterface::BuildCommand(const std::string &path,
@@ -139,31 +272,4 @@ std::string GitInterface::BuildCommand(const std::string &path,
 	gitDirPath.append(".git");
 	return gitName + " " + gitDirectoryArgument + "\"" + gitDirPath + "\" "
 		+ gitWorkTreeArgument + "\"" + path + "\" " + command;
-}
-
-bool GitInterface::ExecuteCommand(const std::string& command, char* buffer,
-	const unsigned int& bufferSize, const bool& suppressStderr)
-{
-	std::string cmdString(command);
-	if (suppressStderr)
-		cmdString.append(stderrToNullFile);
-
-	FILE* cmdFile = popen(cmdString.c_str(), "r");
-	if (!cmdFile)
-		return false;
-
-	fgets(buffer, bufferSize, cmdFile);
-	pclose(cmdFile);
-
-	return true;
-}
-
-int GitInterface::ExecuteCommand(const std::string& command,
-	const bool& suppressStderr)
-{
-	std::string cmdString(command);
-	if (suppressStderr)
-		cmdString.append(stderrToNullFile);
-
-	return system(cmdString.c_str());
 }

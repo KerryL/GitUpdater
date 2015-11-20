@@ -32,6 +32,8 @@ int main(int argc, char *argv[])
 	if (searchPath.back() != '/')
 		searchPath.append("/");
 
+	GitInterface gitIface;
+	std::string repoPath;
 	std::vector<GitInterface::RepositoryInfo> repoInfo;
 	std::vector<std::string> directories(
 		FileSystemNavigator::GetAllSubdirectories(searchPath));
@@ -39,13 +41,12 @@ int main(int argc, char *argv[])
 	const std::string ignoreFile(".ignore");
 	for (i = 0; i < directories.size(); i++)
 	{
-		std::ifstream ignoreFile((searchPath + directories[i] + "/"
-			+ ignoreFile).c_str());
+		repoPath = searchPath + directories[i] + "/";
+		std::ifstream ignoreFile((repoPath + ignoreFile).c_str());
 		if (ignoreFile.is_open())
 			continue;
 
-		repoInfo.push_back(GitInterface::GetRepositoryInfo(
-			searchPath + directories[i]));
+		repoInfo.push_back(GitInterface::GetRepositoryInfo(repoPath));
 		if (repoInfo.back().isGitRepository)
 		{
 			repoCount++;
@@ -61,9 +62,20 @@ int main(int argc, char *argv[])
 				if (repoInfo.back().untrackedFiles)
 					std::cout << "  -> Untracked files" << std::endl;
 			}
+			else if (repoInfo.back().remotes.size() == 0)
+				std::cout << "No remotes for " << repoInfo.back().name << std::endl;
 			else
 			{
-				// TODO:  Do pull/push stuff here
+				if (gitIface.FetchAll(repoPath))
+				{
+					// TODO:  Check for mismatch between local heads and remote heads
+					// For each branch:
+					//   Case:  remote is behind, FF possible
+					//   Case:  local is behind FF possible
+					//   Case:  FF not possible
+				}
+				else
+					std::cout << "Failed to fetch remotes for " << repoInfo.back().name << std::endl;
 			}
 		}
 		else
@@ -76,8 +88,6 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 	std::cout << "\nFound " << repoCount << " git repositories" << std::endl;
-
-	GitInterface gitIface;
 
 	return 0;
 }
