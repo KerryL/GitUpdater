@@ -188,8 +188,11 @@ bool GitInterface::FetchAll(const std::string& path)
 {
 	ShellInterface shell;
 	std::string stdOut;
+	if (!shell.RedirectTTY())
+		std::cerr << "Failed to redirect output from TTY; continuing without credential management" << std::endl;
+
 	stdOut = shell.ExecuteInteractive(BuildCommand(path, gitFetchAllCmd),
-		ShellInterface::RedirectAllToNull);// RedirectErrToOut);
+		ShellInterface::RedirectErrToOut);
 
 	std::istringstream ss(stdOut);
 	if (ss.str().length() == 0)

@@ -67,6 +67,11 @@ bool ShellInterface::ExecuteCommand(const std::string& command,
 	return true;
 }
 
+bool ShellInterface::RedirectTTY()
+{
+	return false;
+}
+
 bool ShellInterface::StartInteractive(const std::string& command)
 {
 	assert(!cmdFile);
@@ -90,6 +95,8 @@ std::string ShellInterface::ExecuteInteractive(const std::string& command,
 	}
 	else
 		std::fprintf(cmdFile, (command + "\n").c_str());
+
+	// TODO:  If TTY redirected and asking for PW, we won't have an EOL, so we'll get stuck in the loop below
 
 	char buffer[2048];
 	buffer[0] = '\0';
