@@ -7,6 +7,7 @@ ipch/
 *.sdf
 *.opensdf
 *.bak
+*.swp
 
 # Ignore GKT directories
 bin/

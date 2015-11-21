@@ -38,11 +38,11 @@ int main(int argc, char *argv[])
 	std::vector<std::string> directories(
 		FileSystemNavigator::GetAllSubdirectories(searchPath));
 	unsigned int i, repoCount(0);
-	const std::string ignoreFile(".ignore");
+	const std::string ignoreFileName(".ignore");
 	for (i = 0; i < directories.size(); i++)
 	{
 		repoPath = searchPath + directories[i] + "/";
-		std::ifstream ignoreFile((repoPath + ignoreFile).c_str());
+		std::ifstream ignoreFile((repoPath + ignoreFileName).c_str());
 		if (ignoreFile.is_open())
 			continue;
 

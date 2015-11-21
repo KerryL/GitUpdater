@@ -20,7 +20,8 @@ public:
 private:
 	static std::vector<std::string> GetAll(const std::string& path,
 		const int& typeMask);
-	static std::vector<std::string> RemoveDotDirectories(std::vector<std::string>& v);
+	static std::vector<std::string> RemoveDotDirectories(
+		std::vector<std::string> v);
 };
 
 #endif// FILE_SYSTEM_NAVIGATOR_H_

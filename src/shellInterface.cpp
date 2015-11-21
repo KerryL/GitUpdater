@@ -40,14 +40,19 @@ ShellInterface::~ShellInterface()
 int ShellInterface::ExecuteCommand(const std::string& command,
 	const RedirectFlags& f)
 {
+//std::cout << "exec1 " << command << std::endl;
 	std::string cmdString(command + BuildRedirectString(f));
 	exitCode = system(cmdString.c_str());
+#ifndef _WIN32
+	exitCode = WEXITSTATUS(exitCode);
+#endif
 	return exitCode;
 }
 
 bool ShellInterface::ExecuteCommand(const std::string& command,
 	std::string& stdOut, const RedirectFlags& f)
 {
+//std::cout << "exec " << command << std::endl;
 	stdOut.clear();
 	std::string cmdString(command + BuildRedirectString(f));
 
@@ -74,6 +79,7 @@ bool ShellInterface::RedirectTTY()
 
 bool ShellInterface::StartInteractive(const std::string& command)
 {
+//std::cout << "execi " << command << std::endl;
 	assert(!cmdFile);
 	cmdFile = popen(command.c_str(), "r");
 	if (!cmdFile)

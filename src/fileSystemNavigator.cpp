@@ -51,7 +51,7 @@ std::vector<std::string> FileSystemNavigator::GetAll(const std::string& path,
 }
 
 std::vector<std::string> FileSystemNavigator::RemoveDotDirectories(
-	std::vector<std::string>& v)
+	std::vector<std::string> v)
 {
 	unsigned int i;
 	for (i = 0; i < v.size(); i++)

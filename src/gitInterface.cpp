@@ -66,6 +66,8 @@ GitInterface::RepositoryInfo GitInterface::GetRepositoryInfo(
 		info.isGitRepository = false;
 		return info;
 	}
+	else
+		info.isGitRepository = true;
 	info.uncommittedChanges = shell.GetExitCode() != 0;
 
 	std::string stdOut;
@@ -108,7 +110,6 @@ GitInterface::RemoteInfo GitInterface::BuildRemote(const std::string& path,
 	info.name = remote;
 
 	ShellInterface shell;
-
 	std::string stdOut;
 	if (!shell.ExecuteCommand(BuildCommand(path, gitListRemoteBranchesCmd), stdOut))
 		std::cerr << "Failed to list remote branches" << std::endl;
@@ -233,8 +234,8 @@ bool GitInterface::FetchAll(const std::string& path)
 	return true;
 }
 
-bool GitInterface::UpdateRemote(const std::string& path,
-	const std::string& remote, std::string& branch)
+bool GitInterface::UpdateRemote(const std::string& /*path*/,
+	const std::string& /*remote*/, std::string& /*branch*/)
 {
 	// TODO:  Implement
 	return false;
