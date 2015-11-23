@@ -14,7 +14,6 @@ class ShellInterface
 {
 public:
 	ShellInterface();
-	~ShellInterface();
 
 	enum RedirectFlags
 	{
@@ -29,12 +28,8 @@ public:
 		const RedirectFlags& f = RedirectAllToNull);
 	bool ExecuteCommand(const std::string& command, std::string& stdOut,
 		const RedirectFlags& f = RedirectNone);
-	std::string ExecuteInteractive(const std::string& command,
-		const RedirectFlags& f = RedirectNone);
 
 	int GetExitCode() const { return exitCode; }
-
-	bool RedirectTTY();
 
 private:
 	static const std::string stderrToStdout;
@@ -44,9 +39,6 @@ private:
 
 	FILE* cmdFile;
 	int exitCode;
-
-	bool StartInteractive(const std::string& command);
-	int StopInteractive();
 
 	std::string BuildRedirectString(const RedirectFlags& f) const;
 };

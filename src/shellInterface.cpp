@@ -31,16 +31,9 @@ ShellInterface::ShellInterface()
 	cmdFile = NULL;
 }
 
-ShellInterface::~ShellInterface()
-{
-	if (cmdFile)
-		StopInteractive();
-}
-
 int ShellInterface::ExecuteCommand(const std::string& command,
 	const RedirectFlags& f)
 {
-//std::cout << "exec1 " << command << std::endl;
 	std::string cmdString(command + BuildRedirectString(f));
 	exitCode = system(cmdString.c_str());
 #ifndef _WIN32
@@ -52,7 +45,6 @@ int ShellInterface::ExecuteCommand(const std::string& command,
 bool ShellInterface::ExecuteCommand(const std::string& command,
 	std::string& stdOut, const RedirectFlags& f)
 {
-//std::cout << "exec " << command << std::endl;
 	stdOut.clear();
 	std::string cmdString(command + BuildRedirectString(f));
 
@@ -61,7 +53,7 @@ bool ShellInterface::ExecuteCommand(const std::string& command,
 	if (!cmdFile)
 		return false;
 
-	char buffer[2048];
+	char buffer[4096];
 	buffer[0] = '\0';
 	while (std::fgets(buffer, sizeof(buffer), cmdFile))
 		stdOut.append(buffer);
@@ -70,54 +62,6 @@ bool ShellInterface::ExecuteCommand(const std::string& command,
 	cmdFile = NULL;
 
 	return true;
-}
-
-bool ShellInterface::RedirectTTY()
-{
-	return false;
-}
-
-bool ShellInterface::StartInteractive(const std::string& command)
-{
-//std::cout << "execi " << command << std::endl;
-	assert(!cmdFile);
-	cmdFile = popen(command.c_str(), "r");
-	if (!cmdFile)
-		return false;
-	return true;
-}
-
-std::string ShellInterface::ExecuteInteractive(const std::string& command,
-	const RedirectFlags& f)
-{
-	if (!cmdFile)
-	{
-		assert(!command.empty());
-		if (!StartInteractive((command + BuildRedirectString(f))))
-		{
-			std::cerr << "Failed to start interactive shell" << std::endl;
-			return "";
-		}
-	}
-	else
-		std::fprintf(cmdFile, (command + "\n").c_str());
-
-	// TODO:  If TTY redirected and asking for PW, we won't have an EOL, so we'll get stuck in the loop below
-
-	char buffer[2048];
-	buffer[0] = '\0';
-	std::string stdOut;
-	while (std::fgets(buffer, sizeof(buffer), cmdFile))
-		stdOut.append(buffer);
-	return stdOut;
-}
-
-int ShellInterface::StopInteractive()
-{
-	assert(cmdFile);
-	exitCode = pclose(cmdFile);
-	cmdFile = NULL;
-	return exitCode;
 }
 
 std::string ShellInterface::BuildRedirectString(const RedirectFlags& f) const

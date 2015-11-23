@@ -10,9 +10,6 @@
 #include <string>
 #include <vector>
 
-// Local headers
-#include "credentialManager.h"
-
 class GitInterface
 {
 public:
@@ -46,7 +43,7 @@ public:
 
 	static std::string GetGitVersion();
 	static RepositoryInfo GetRepositoryInfo(const std::string& path);
-	bool FetchAll(const std::string& path);
+	bool FetchAll(const std::string& path, std::string& errorString);
 	bool UpdateRemote(const std::string& path,
 		const std::string& remote, std::string& branch);
 
@@ -87,8 +84,6 @@ private:
 	static BranchInfo BuildBranch(const std::string& path,
 		const std::string& remote, const std::string& branch);
 	static std::string CleanBranchName(const std::string &name);
-
-	CredentialManager credentials;
 };
 
 #endif

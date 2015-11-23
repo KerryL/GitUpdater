@@ -7,11 +7,16 @@
 #include <sstream>
 #include <iostream>
 #include <cassert>
+#include <cstdlib>
 
 // Local headers
 #include "gitInterface.h"
 #include "shellInterface.h"
 #include "stringUtilities.h"
+
+#ifdef _WIN32
+#define putenv _putenv
+#endif
 
 const std::string GitInterface::gitName("git");
 const std::string GitInterface::gitDirectoryArgument("--git-dir=");
@@ -71,19 +76,23 @@ GitInterface::RepositoryInfo GitInterface::GetRepositoryInfo(
 	info.uncommittedChanges = shell.GetExitCode() != 0;
 
 	std::string stdOut;
-	if (!shell.ExecuteCommand(BuildCommand(path, gitGetUnstagedChangesCmd), stdOut))
+	if (!shell.ExecuteCommand(BuildCommand(path, gitGetUnstagedChangesCmd),
+		stdOut, ShellInterface::RedirectErrToOut))
 		std::cerr << "Failed to check for unstaged changes" << std::endl;
 	info.unstagedChanges = !stdOut.empty();
 
-	if (!shell.ExecuteCommand(BuildCommand(path, gitGetUntrackedFilesCmd), stdOut))
+	if (!shell.ExecuteCommand(BuildCommand(path, gitGetUntrackedFilesCmd),
+		stdOut, ShellInterface::RedirectErrToOut))
 		std::cerr << "Failed to check for untracked files" << std::endl;
 	info.untrackedFiles = !stdOut.empty();
 
-	if (!shell.ExecuteCommand(BuildCommand(path, gitListRemotesCmd), stdOut))
+	if (!shell.ExecuteCommand(BuildCommand(path, gitListRemotesCmd), stdOut,
+		ShellInterface::RedirectErrToOut))
 		std::cerr << "Failed to list remotes" << std::endl;
 	info.remotes = BuildRemotes(path, SplitBufferByLine(stdOut));
 
-	if (!shell.ExecuteCommand(BuildCommand(path, gitListBranchesCmd), stdOut))
+	if (!shell.ExecuteCommand(BuildCommand(path, gitListBranchesCmd), stdOut,
+		ShellInterface::RedirectErrToOut))
 		std::cerr << "Failed to list branches" << std::endl;
 	info.branches = BuildBranches(path, SplitBufferByLine(stdOut));
 
@@ -185,15 +194,40 @@ std::vector<std::string> GitInterface::SplitBufferByLine(const std::string& buff
 	return lines;
 }
 
-bool GitInterface::FetchAll(const std::string& path)
+bool GitInterface::FetchAll(const std::string& path, std::string& errorString)
 {
 	ShellInterface shell;
 	std::string stdOut;
-	if (!shell.RedirectTTY())
-		std::cerr << "Failed to redirect output from TTY; continuing without credential management" << std::endl;
 
-	stdOut = shell.ExecuteInteractive(BuildCommand(path, gitFetchAllCmd),
-		ShellInterface::RedirectErrToOut);
+	const std::string gitAskPassVar("GIT_ASKPASS");
+	char *origGitAskpass = std::getenv(gitAskPassVar.c_str());
+	const std::string sshAskPassVar("SSH_ASKPASS");
+	char *origSshAskpass = std::getenv(sshAskPassVar.c_str());
+	std::string cmd(gitAskPassVar + std::string("=C:\\Users\\kloux\\Documents\\Visual Studio 2010\\Projects\\GitUpdater\\Debug\\GitUpdater.exe --pwRequest"));
+	putenv(cmd.c_str());
+	cmd =sshAskPassVar + std::string("=C:\\Users\\kloux\\Documents\\Visual Studio 2010\\Projects\\GitUpdater\\Debug\\GitUpdater.exe --pwRequest");
+	putenv(cmd.c_str());
+
+	if (!shell.ExecuteCommand(BuildCommand(path, gitFetchAllCmd), stdOut,
+		ShellInterface::RedirectErrToOut))
+	{
+		std::cerr << "Failed to execute fetch command" << std::endl;
+		return false;
+	}
+
+	if (origGitAskpass)
+		putenv(std::string(gitAskPassVar + "=" + origGitAskpass).c_str());
+	else
+	{
+		//unsetenv(
+	}
+
+	if (origSshAskpass)
+		putenv(std::string(sshAskPassVar + "=" + origSshAskpass).c_str());
+	else
+	{
+		//unsetenv(
+	}
 
 	std::istringstream ss(stdOut);
 	if (ss.str().length() == 0)
@@ -202,9 +236,9 @@ bool GitInterface::FetchAll(const std::string& path)
 		return false;
 	}
 
+	bool fetchedAll(true);
 	std::string response, remoteName;
 	const std::string fetching("Fetching");
-	const std::string password("Password for");
 	while (std::getline(ss, response))
 	{
 		if (response.length() > fetching.length() &&
@@ -213,25 +247,14 @@ bool GitInterface::FetchAll(const std::string& path)
 		else if (response.length() > gitFailMessage.length() &&
 			response.substr(0, gitFailMessage.length()).compare(gitFailMessage) == 0)
 		{
-			std::cerr << "Failed to fetch from " << remoteName << std::endl;
-			return false;
-		}
-		else if (response.length() > password.length() &&
-			response.substr(0, password.length()).compare(password) == 0)
-		{
-			std::string pw = credentials.GetCredentials(response);
-			if (pw.empty())
-			{
-				// TODO:  Get from user
-			}
-
-			stdOut = shell.ExecuteInteractive(pw + "\n");
-			ss.clear();
-			ss.str(stdOut);
+			std::ostringstream errorStream;
+			errorStream << "  Failed to fetch from " << remoteName << "\n";
+			errorString.append(errorStream.str());
+			fetchedAll = false;
 		}
 	}
 
-	return true;
+	return fetchedAll;
 }
 
 bool GitInterface::UpdateRemote(const std::string& /*path*/,

@@ -6,6 +6,21 @@
 // Local headers
 #include "credentialManager.h"
 
+const std::string CredentialManager::passwordRequestFlag("--pwRequest");
+const std::string CredentialManager::memoryName("Global\\gitUpdaterSharedMemory");
+
+CredentialManager::CredentialManager() : shMem(4096)
+{
+	shMem.Initialize(memoryName);
+	shMem.ShareObject(this);
+	shMem.UpdateObjectState(shMem.GetObject(0), this, sizeof(*this));
+}
+
+CredentialManager* CredentialManager::GetSharedManager() const
+{
+	return static_cast<CredentialManager*>(shMem.GetObject(0));
+}
+
 std::string CredentialManager::GetCredentials(
 	const std::string& requestString) const
 {
@@ -21,4 +36,10 @@ void CredentialManager::AddCredentials(const std::string& requestString,
 	const std::string& password)
 {
 	credentials[requestString] = password;
+	shMem.UpdateObjectState(shMem.GetObject(0), this, sizeof(*this));
+}
+
+bool CredentialManager::IsPasswordRequestFlag(const std::string& s)
+{
+	return s.compare(passwordRequestFlag) == 0;
 }
