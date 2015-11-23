@@ -12,29 +12,9 @@
 // Local headers
 #include "gitInterface.h"
 #include "fileSystemNavigator.h"
-#include "credentialManager.h"
 
 int main(int argc, char *argv[])
 {
-	CredentialManager credentials;
-	if (argc == 3 && credentials.IsPasswordRequestFlag(argv[1]))
-	{
-		CredentialManager* shCreds = credentials.GetSharedManager();
-		std::cerr << "found shCreds at " << (void*) shCreds << std::endl;
-		std::string pw = shCreds->GetCredentials(argv[2]);
-		std::cerr << "  pw = '" << pw << "'" << std::endl;
-		if (pw.empty())
-		{
-			std::cerr << argv[2];
-			std::cin >> pw;
-			shCreds->AddCredentials(argv[2], pw);
-		}
-		else
-			std::cout << pw << std::endl;
-
-		return 0;
-	}
-
 	std::string gitVersion = GitInterface::GetGitVersion();
 	if (gitVersion.empty())
 	{
@@ -97,13 +77,15 @@ int main(int argc, char *argv[])
 				}
 				else
 				{
-					std::cout << "Failed to fetch remotes for " << repoInfo.back().name << "\n";
+					std::cout << repoInfo.back().name << "\n";
 					std::cout << errorList << std::endl;
 				}
 			}
 		}
 		else
-			std::cout << repoInfo.back().name << " is not a git repository" << std::endl;
+		{
+			//std::cout << repoInfo.back().name << " is not a git repository" << std::endl;
+		}
 	}
 
 	if (repoCount == 0)

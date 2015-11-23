@@ -120,18 +120,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\credentialManager.cpp" />
     <ClCompile Include="..\src\fileSystemNavigator.cpp" />
     <ClCompile Include="..\src\gitInterface.cpp" />
     <ClCompile Include="..\src\main.cpp" />
-    <ClCompile Include="..\src\sharedMemory.cpp" />
     <ClCompile Include="..\src\shellInterface.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\credentialManager.h" />
     <ClInclude Include="..\src\fileSystemNavigator.h" />
     <ClInclude Include="..\src\gitInterface.h" />
-    <ClInclude Include="..\src\sharedMemory.h" />
     <ClInclude Include="..\src\shellInterface.h" />
     <ClInclude Include="..\src\stringUtilities.h" />
     <ClInclude Include="..\src\windirent.h" />

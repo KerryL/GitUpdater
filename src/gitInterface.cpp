@@ -199,34 +199,11 @@ bool GitInterface::FetchAll(const std::string& path, std::string& errorString)
 	ShellInterface shell;
 	std::string stdOut;
 
-	const std::string gitAskPassVar("GIT_ASKPASS");
-	char *origGitAskpass = std::getenv(gitAskPassVar.c_str());
-	const std::string sshAskPassVar("SSH_ASKPASS");
-	char *origSshAskpass = std::getenv(sshAskPassVar.c_str());
-	std::string cmd(gitAskPassVar + std::string("=C:\\Users\\kloux\\Documents\\Visual Studio 2010\\Projects\\GitUpdater\\Debug\\GitUpdater.exe --pwRequest"));
-	putenv(cmd.c_str());
-	cmd =sshAskPassVar + std::string("=C:\\Users\\kloux\\Documents\\Visual Studio 2010\\Projects\\GitUpdater\\Debug\\GitUpdater.exe --pwRequest");
-	putenv(cmd.c_str());
-
 	if (!shell.ExecuteCommand(BuildCommand(path, gitFetchAllCmd), stdOut,
 		ShellInterface::RedirectErrToOut))
 	{
 		std::cerr << "Failed to execute fetch command" << std::endl;
 		return false;
-	}
-
-	if (origGitAskpass)
-		putenv(std::string(gitAskPassVar + "=" + origGitAskpass).c_str());
-	else
-	{
-		//unsetenv(
-	}
-
-	if (origSshAskpass)
-		putenv(std::string(sshAskPassVar + "=" + origSshAskpass).c_str());
-	else
-	{
-		//unsetenv(
 	}
 
 	std::istringstream ss(stdOut);
