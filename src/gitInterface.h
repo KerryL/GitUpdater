@@ -45,7 +45,18 @@ public:
 	static RepositoryInfo GetRepositoryInfo(const std::string& path);
 	bool FetchAll(const std::string& path, std::string& errorString);
 	bool UpdateRemote(const std::string& path,
-		const std::string& remote, std::string& branch);
+		const std::string& remote, std::string& branch);// TODO:  Rename "push to remote?"
+
+	enum RepositoryStatus
+	{
+		StatusUpToDate,
+		StatusLocalAhead,
+		StatusRemoteAhead,
+		StatusMissingBranch
+	};
+
+	static RepositoryStatus CompareHeads(const RepositoryInfo& repoInfo,
+		const RemoteInfo &remote, const std::string& branch);
 
 private:
 	static const std::string gitName;
@@ -83,7 +94,7 @@ private:
 		const std::string& branch);
 	static BranchInfo BuildBranch(const std::string& path,
 		const std::string& remote, const std::string& branch);
-	static std::string CleanBranchName(const std::string &name);
+	static std::string CleanName(const std::string &name);
 };
 
 #endif

@@ -147,7 +147,7 @@ GitInterface::RemoteInfo GitInterface::BuildRemote(const std::string& path,
 	return info;
 }
 
-std::string GitInterface::CleanBranchName(const std::string &name)
+std::string GitInterface::CleanName(const std::string &name)
 {
 	std::string cleanName(Trim(name));
 	assert(name.length() > 0);
@@ -171,7 +171,7 @@ GitInterface::BranchInfo GitInterface::BuildBranch(const std::string& path,
 {
 	BranchInfo info;
 	info.name = branch;
-	info.hash = GetLocalHead(path, CleanBranchName(branch));
+	info.hash = GetLocalHead(path, CleanName(branch));
 	return info;
 }
 
@@ -190,7 +190,7 @@ std::vector<std::string> GitInterface::SplitBufferByLine(const std::string& buff
 	std::istringstream ss(buffer);
 	std::string token;
 	while (std::getline(ss, token))
-		lines.push_back(token);
+		lines.push_back(CleanName(token));
 	return lines;
 }
 
@@ -276,4 +276,31 @@ std::string GitInterface::BuildCommand(const std::string &path,
 	gitDirPath.append(".git");
 	return gitName + " " + gitDirectoryArgument + "\"" + gitDirPath + "\" "
 		+ gitWorkTreeArgument + "\"" + path + "\" " + command;
+}
+
+GitInterface::RepositoryStatus GitInterface::CompareHeads(const RepositoryInfo& repoInfo,
+		const RemoteInfo &remote, const std::string& branch)
+{
+	unsigned int i, j;
+	for (i = 0; i < remote.branches.size(); i++)
+	{
+		if (remote.branches[i].name.compare(branch) == 0)
+		{
+			for (j = 0; j < repoInfo.branches.size(); j++)
+			{
+				if (repoInfo.branches[j].name.compare(branch) == 0)
+				{
+					if (remote.branches[i].hash.compare(repoInfo.branches[j].hash) == 0)
+						return StatusUpToDate;
+					else
+					{
+						// TODO:  Which is ahead of which?
+						return StatusLocalAhead;
+					}
+				}
+			}
+		}
+	}
+
+	return StatusMissingBranch;
 }

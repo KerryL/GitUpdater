@@ -69,8 +69,33 @@ int main(int argc, char *argv[])
 				std::string errorList;
 				if (gitIface.FetchAll(repoPath, errorList))
 				{
+					unsigned int j, k;
+					for (j = 0; j < repoInfo.back().remotes.size(); j++)
+					{
+						for (k = 0; k < repoInfo.back().branches.size(); k++)
+						{
+							GitInterface::RepositoryStatus status = GitInterface::CompareHeads(
+								repoInfo.back(), repoInfo.back().remotes[j],
+								repoInfo.back().branches[k].name);
+
+							if (status != GitInterface::StatusUpToDate)
+							{
+								std::cout << repoInfo.back().name << " ==> "
+									<< repoInfo.back().remotes[j].name
+									<< ":" << repoInfo.back().branches[k].name;
+
+								if (status == GitInterface::StatusLocalAhead)
+									std::cout << " is out-of-date" << std::endl;
+								else if (status == GitInterface::StatusRemoteAhead)
+									std::cout << " has diverged from remote" << std::endl;
+								else if (status == GitInterface::StatusMissingBranch)
+									std::cout << " branch is missing" << std::endl;
+							}
+						}
+					}
 					// TODO:  Check for mismatch between local heads and remote heads
 					// For each branch:
+					//   Case:  branch exists only locally
 					//   Case:  remote is behind, FF possible
 					//   Case:  local is behind FF possible
 					//   Case:  FF not possible
