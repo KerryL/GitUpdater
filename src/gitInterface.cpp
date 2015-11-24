@@ -278,29 +278,45 @@ std::string GitInterface::BuildCommand(const std::string &path,
 		+ gitWorkTreeArgument + "\"" + path + "\" " + command;
 }
 
-GitInterface::RepositoryStatus GitInterface::CompareHeads(const RepositoryInfo& repoInfo,
-		const RemoteInfo &remote, const std::string& branch)
+GitInterface::RepositoryStatus GitInterface::CompareHeads(
+	const std::string& path, const RepositoryInfo& repoInfo,
+	const std::string& remote, const std::string& branch)
 {
-	unsigned int i, j;
-	for (i = 0; i < remote.branches.size(); i++)
+	std::string localHash;
+	unsigned int i;
+	for (i = 0; i < repoInfo.branches.size(); i++)
 	{
-		if (remote.branches[i].name.compare(branch) == 0)
+		if (repoInfo.branches[i].name.compare(branch) == 0)
 		{
-			for (j = 0; j < repoInfo.branches.size(); j++)
-			{
-				if (repoInfo.branches[j].name.compare(branch) == 0)
-				{
-					if (remote.branches[i].hash.compare(repoInfo.branches[j].hash) == 0)
-						return StatusUpToDate;
-					else
-					{
-						// TODO:  Which is ahead of which?
-						return StatusLocalAhead;
-					}
-				}
-			}
+			localHash = repoInfo.branches[i].hash;
+			break;
 		}
 	}
 
-	return StatusRemoteMissingBranch;
+	if (localHash.empty())
+		return StatusLocalMissingBranch;
+
+	ShellInterface shell;
+	std::string stdOut;
+	if (!shell.ExecuteCommand(BuildCommand(path, "rev-list " + remote + "/" + branch),
+		stdOut, ShellInterface::RedirectErrToOut))
+		std::cerr << "Failed to get revision list" << std::endl;
+	std::vector<std::string> hashes = SplitBufferByLine(stdOut);
+
+	const std::string ambiguousArgument("fatal: ambiguous argument");
+	for (i = 0; i < hashes.size(); i++)
+	{
+		if (hashes[i].length() > ambiguousArgument.length() &&
+			hashes[i].substr(0, ambiguousArgument.length()).compare(ambiguousArgument) == 0)
+			return StatusRemoteMissingBranch;
+
+		if (hashes[i].compare(localHash) == 0)
+		{
+			if (i == 0)
+				return StatusUpToDate;
+			return StatusRemoteAhead;
+		}
+	}
+
+	return StatusLocalAhead;
 }

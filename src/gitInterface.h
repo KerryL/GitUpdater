@@ -56,8 +56,9 @@ public:
 		StatusLocalMissingBranch
 	};
 
-	static RepositoryStatus CompareHeads(const RepositoryInfo& repoInfo,
-		const RemoteInfo &remote, const std::string& branch);
+	static RepositoryStatus CompareHeads(const std::string& path,
+		const RepositoryInfo& repoInfo, const std::string& remote,
+		const std::string& branch);
 
 private:
 	static const std::string gitName;

@@ -85,8 +85,9 @@ int main(int argc, char *argv[])
 					{
 						for (k = 0; k < repoInfo.back().branches.size(); k++)
 						{
-							GitInterface::RepositoryStatus status = GitInterface::CompareHeads(
-								repoInfo.back(), repoInfo.back().remotes[j],
+							GitInterface::RepositoryStatus status =
+								GitInterface::CompareHeads(repoPath,
+								repoInfo.back(), repoInfo.back().remotes[j].name,
 								repoInfo.back().branches[k].name);
 
 							if (status != GitInterface::StatusUpToDate)
@@ -105,7 +106,7 @@ int main(int argc, char *argv[])
 
 								if (status == GitInterface::StatusLocalAhead)
 								{
-									std::cout << " is out-of-date\n";
+									std::cout << " is out-of-date";
 									// TODO:  Push
 								}
 								else if (status == GitInterface::StatusRemoteAhead)
@@ -113,18 +114,27 @@ int main(int argc, char *argv[])
 									// if (ff possible)
 									// merge
 									// else
-									std::cout << " has diverged from remote and requires user action\n";
+									std::cout << " has diverged from remote and requires user action";
 								}
 								else if (status == GitInterface::StatusRemoteMissingBranch)
 								{
-									std::cout << " branch is missing from remote\n";
+									std::cout << " branch is missing from remote";
 									// TODO:  Push
 								}
+								else if (status == GitInterface::StatusLocalMissingBranch)
+								{
+									std::cout << " branch does not exist locally";
+								}
 
-								std::cout << std::endl;
-								needsSpace = false;
+								
 							}
 						}
+					}
+
+					if (printedName)
+					{
+						std::cout << "\n" << std::endl;
+						needsSpace = false;
 					}
 				}
 				else
