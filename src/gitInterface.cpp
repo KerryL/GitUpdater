@@ -302,5 +302,5 @@ GitInterface::RepositoryStatus GitInterface::CompareHeads(const RepositoryInfo& 
 		}
 	}
 
-	return StatusMissingBranch;
+	return StatusRemoteMissingBranch;
 }

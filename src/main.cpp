@@ -39,6 +39,7 @@ int main(int argc, char *argv[])
 		FileSystemNavigator::GetAllSubdirectories(searchPath));
 	unsigned int i, repoCount(0);
 	const std::string ignoreFileName(".ignore");
+	bool needsSpace(false);
 	for (i = 0; i < directories.size(); i++)
 	{
 		repoPath = searchPath + directories[i] + "/";
@@ -54,21 +55,31 @@ int main(int argc, char *argv[])
 				repoInfo.back().unstagedChanges ||
 				repoInfo.back().untrackedFiles)
 			{
+				if (needsSpace)
+					std::cout << "\n";
+
 				std::cout << repoInfo.back().name << "\n";
 				if (repoInfo.back().uncommittedChanges)
-					std::cout << "  -> Uncommitted changes" << std::endl;
+					std::cout << "  -> Uncommitted changes\n";
 				if (repoInfo.back().unstagedChanges)
-					std::cout << "  -> Unstaged changes" << std::endl;
+					std::cout << "  -> Unstaged changes\n";
 				if (repoInfo.back().untrackedFiles)
-					std::cout << "  -> Untracked files" << std::endl;
+					std::cout << "  -> Untracked files\n";
+
+				std::cout << std::endl;
+				needsSpace = false;
 			}
 			else if (repoInfo.back().remotes.size() == 0)
+			{
 				std::cout << "No remotes for " << repoInfo.back().name << std::endl;
+				needsSpace = true;
+			}
 			else
 			{
 				std::string errorList;
 				if (gitIface.FetchAll(repoPath, errorList))
 				{
+					bool printedName(false);
 					unsigned int j, k;
 					for (j = 0; j < repoInfo.back().remotes.size(); j++)
 					{
@@ -80,36 +91,57 @@ int main(int argc, char *argv[])
 
 							if (status != GitInterface::StatusUpToDate)
 							{
-								std::cout << repoInfo.back().name << " ==> "
+								if (!printedName)
+								{
+									if (needsSpace)
+										std::cout << "\n";
+									std::cout << repoInfo.back().name;
+									printedName = true;
+								}
+									
+								std::cout << "\n ==> "
 									<< repoInfo.back().remotes[j].name
 									<< ":" << repoInfo.back().branches[k].name;
 
 								if (status == GitInterface::StatusLocalAhead)
-									std::cout << " is out-of-date" << std::endl;
+								{
+									std::cout << " is out-of-date\n";
+									// TODO:  Push
+								}
 								else if (status == GitInterface::StatusRemoteAhead)
-									std::cout << " has diverged from remote" << std::endl;
-								else if (status == GitInterface::StatusMissingBranch)
-									std::cout << " branch is missing" << std::endl;
+								{
+									// if (ff possible)
+									// merge
+									// else
+									std::cout << " has diverged from remote and requires user action\n";
+								}
+								else if (status == GitInterface::StatusRemoteMissingBranch)
+								{
+									std::cout << " branch is missing from remote\n";
+									// TODO:  Push
+								}
+
+								std::cout << std::endl;
+								needsSpace = false;
 							}
 						}
 					}
-					// TODO:  Check for mismatch between local heads and remote heads
-					// For each branch:
-					//   Case:  branch exists only locally
-					//   Case:  remote is behind, FF possible
-					//   Case:  local is behind FF possible
-					//   Case:  FF not possible
 				}
 				else
 				{
+					if (needsSpace)
+						std::cout << "\n";
+
 					std::cout << repoInfo.back().name << "\n";
 					std::cout << errorList << std::endl;
+					needsSpace = false;
 				}
 			}
 		}
 		else
 		{
-			//std::cout << repoInfo.back().name << " is not a git repository" << std::endl;
+			/*std::cout << repoInfo.back().name << " is not a git repository" << std::endl;
+			needsSpace = true;*/
 		}
 	}
 

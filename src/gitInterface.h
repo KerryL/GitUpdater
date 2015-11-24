@@ -52,7 +52,8 @@ public:
 		StatusUpToDate,
 		StatusLocalAhead,
 		StatusRemoteAhead,
-		StatusMissingBranch
+		StatusRemoteMissingBranch,
+		StatusLocalMissingBranch
 	};
 
 	static RepositoryStatus CompareHeads(const RepositoryInfo& repoInfo,
