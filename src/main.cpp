@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
 	std::vector<GitInterface::RepositoryInfo> repoInfo;
 	std::vector<std::string> directories(
 		FileSystemNavigator::GetAllSubdirectories(searchPath));
-	unsigned int i, repoCount(0);
+	unsigned int i, repoCount(0), ignoreCount(0), nonRepoCount(0);
 	const std::string ignoreFileName(".ignore");
 	bool needsSpace(false);
 	for (i = 0; i < directories.size(); i++)
@@ -45,7 +45,10 @@ int main(int argc, char *argv[])
 		repoPath = searchPath + directories[i] + "/";
 		std::ifstream ignoreFile((repoPath + ignoreFileName).c_str());
 		if (ignoreFile.is_open())
+		{
+			ignoreCount++;
 			continue;
+		}
 
 		repoInfo.push_back(GitInterface::GetRepositoryInfo(repoPath));
 		if (repoInfo.back().isGitRepository)
@@ -104,22 +107,23 @@ int main(int argc, char *argv[])
 									<< repoInfo.back().remotes[j].name
 									<< ":" << repoInfo.back().branches[k].name;
 
-								if (status == GitInterface::StatusLocalAhead)
+								if (status == GitInterface::StatusLocalAhead ||
+									status == GitInterface::StatusRemoteMissingBranch)
 								{
-									std::cout << " is out-of-date";
-									// TODO:  Push
+									if (gitIface.PushToRemote(repoPath,
+										repoInfo.back().remotes[j].name,
+										repoInfo.back().branches[k].name))
+										std::cout << " is now up-to-date";
+									else
+										std::cout << " push failed";
 								}
 								else if (status == GitInterface::StatusRemoteAhead)
 								{
 									// if (ff possible)
 									// merge
 									// else
+									// See:  http://stackoverflow.com/questions/15316601/in-what-cases-could-git-pull-be-harmful
 									std::cout << " has diverged from remote and requires user action";
-								}
-								else if (status == GitInterface::StatusRemoteMissingBranch)
-								{
-									std::cout << " branch is missing from remote";
-									// TODO:  Push
 								}
 								else if (status == GitInterface::StatusLocalMissingBranch)
 								{
@@ -150,6 +154,7 @@ int main(int argc, char *argv[])
 		}
 		else
 		{
+			nonRepoCount++;
 			/*std::cout << repoInfo.back().name << " is not a git repository" << std::endl;
 			needsSpace = true;*/
 		}
@@ -160,7 +165,10 @@ int main(int argc, char *argv[])
 		std::cout << "Failed to find any git repositories under '" << searchPath << "'" << std::endl;
 		return 0;
 	}
-	std::cout << "\nFound " << repoCount << " git repositories" << std::endl;
+
+	std::cout << "\nChecked " << repoCount << " git repositories" << std::endl;
+	std::cout << "Skipped " << nonRepoCount << " directories which did not contain repositories" << std::endl;
+	std::cout << "Ignored " << ignoreCount << " directories" << std::endl;
 
 	return 0;
 }

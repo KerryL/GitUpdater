@@ -44,8 +44,8 @@ public:
 	static std::string GetGitVersion();
 	static RepositoryInfo GetRepositoryInfo(const std::string& path);
 	bool FetchAll(const std::string& path, std::string& errorString);
-	bool UpdateRemote(const std::string& path,
-		const std::string& remote, std::string& branch);// TODO:  Rename "push to remote?"
+	bool PushToRemote(const std::string& path,
+		const std::string& remote, std::string& branch);
 
 	enum RepositoryStatus
 	{
@@ -74,6 +74,7 @@ private:
 	static const std::string gitListRemotesCmd;
 	static const std::string gitFetchAllCmd;
 	static const std::string gitFailMessage;
+	static const std::string gitPushCmd;
 
 	static std::string GetLocalHead(const std::string& path,
 		const std::string& branch);
@@ -96,7 +97,8 @@ private:
 		const std::string& branch);
 	static BranchInfo BuildBranch(const std::string& path,
 		const std::string& remote, const std::string& branch);
-	static std::string CleanName(const std::string &name);
+
+	static std::string CleanString(const std::string &name);
 };
 
 #endif

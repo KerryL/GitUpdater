@@ -30,6 +30,8 @@ const std::string GitInterface::gitListRemoteBranchesCmd("branch -r");
 const std::string GitInterface::gitGetCurrentBranchCmd("rev-parse --abbrev-ref HEAD");
 const std::string GitInterface::gitListRemotesCmd("remote");
 const std::string GitInterface::gitFetchAllCmd("fetch --all --prune --tags");
+const std::string GitInterface::gitPushCmd("push --tags");
+//const std::string GitInterface::gitPushCmd("push --follow-tags");// git 1.8.3 or later only
 const std::string GitInterface::gitFailMessage("fatal:");
 
 std::string GitInterface::GetGitVersion()
@@ -98,6 +100,7 @@ GitInterface::RepositoryInfo GitInterface::GetRepositoryInfo(
 
 	// TODO:  Implement
 	//info.subModules;
+	// See:  http://stackoverflow.com/questions/1030169/easy-way-pull-latest-of-all-submodules
 
 	return info;
 }
@@ -147,7 +150,7 @@ GitInterface::RemoteInfo GitInterface::BuildRemote(const std::string& path,
 	return info;
 }
 
-std::string GitInterface::CleanName(const std::string &name)
+std::string GitInterface::CleanString(const std::string &name)
 {
 	std::string cleanName(Trim(name));
 	assert(name.length() > 0);
@@ -171,7 +174,7 @@ GitInterface::BranchInfo GitInterface::BuildBranch(const std::string& path,
 {
 	BranchInfo info;
 	info.name = branch;
-	info.hash = GetLocalHead(path, CleanName(branch));
+	info.hash = GetLocalHead(path, CleanString(branch));
 	return info;
 }
 
@@ -190,7 +193,7 @@ std::vector<std::string> GitInterface::SplitBufferByLine(const std::string& buff
 	std::istringstream ss(buffer);
 	std::string token;
 	while (std::getline(ss, token))
-		lines.push_back(CleanName(token));
+		lines.push_back(CleanString(token));
 	return lines;
 }
 
@@ -234,11 +237,20 @@ bool GitInterface::FetchAll(const std::string& path, std::string& errorString)
 	return fetchedAll;
 }
 
-bool GitInterface::UpdateRemote(const std::string& /*path*/,
-	const std::string& /*remote*/, std::string& /*branch*/)
+bool GitInterface::PushToRemote(const std::string& path,
+	const std::string& remote, std::string& branch)
 {
-	// TODO:  Implement
-	return false;
+	ShellInterface shell;
+	shell.ExecuteCommand(BuildCommand(path,
+		gitPushCmd + " " + remote + " " + branch));
+
+	if (shell.GetExitCode() == 1)
+	{
+		std::cout << "fast-forward push not possible; ";
+		return false;
+	}
+
+	return shell.GetExitCode() == 0;
 }
 
 std::string GitInterface::GetLocalHead(const std::string& path,
@@ -248,7 +260,7 @@ std::string GitInterface::GetLocalHead(const std::string& path,
 	std::string stdOut;
 	if (!shell.ExecuteCommand(BuildCommand(path, "rev-parse " + branch), stdOut))
 		return "";
-	return stdOut;
+	return CleanString(stdOut);
 }
 
 std::string GitInterface::GetRemoteHead(const std::string& path,
@@ -259,7 +271,7 @@ std::string GitInterface::GetRemoteHead(const std::string& path,
 	if (!shell.ExecuteCommand(BuildCommand(path,
 		"rev-parse refs/remotes/" + remote + "/" + branch), stdOut))
 		return "";
-	return stdOut;
+	return CleanString(stdOut);
 }
 
 std::string GitInterface::BuildCommand(const std::string &path,
